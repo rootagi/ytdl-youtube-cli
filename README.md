@@ -43,8 +43,8 @@ python3 ytdl-cli.py --help
 ```
 
 ## System Requirements
-- Python 3.x (already installed on your system).
-- (Optional) `ffmpeg` installed globally:
+- Python 3.x .
+-  `ffmpeg` 
   ```bash
   sudo apt install ffmpeg
   ```
