@@ -135,9 +135,10 @@ def get_ffmpeg_download_url():
     tag = get_ffmpeg_platform_tag()
     if not tag:
         return None
+    url_tag = tag.replace("windows-", "win-")
     return (
         f"https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/"
-        f"{FFBINARIES_VERSION}/ffmpeg-{FFBINARIES_VERSION.lstrip('v')}-{tag}.zip"
+        f"{FFBINARIES_VERSION}/ffmpeg-{FFBINARIES_VERSION.lstrip('v')}-{url_tag}.zip"
     )
 
 def load_urls_from_file(file_path):
@@ -613,23 +614,36 @@ def fetch_metadata(url, ytdlp_path, ffmpeg_path=None, flat=False):
     stderr_lines = []
     
     def read_stderr():
-        for line in process.stderr:
-            clean_line = line.strip()
-            stderr_lines.append(clean_line)
-            if "extracting" in clean_line.lower() or "signature" in clean_line.lower() or "js" in clean_line.lower() or "downloading" in clean_line.lower():
-                display_line = clean_line.replace("[youtube] ", "").strip()
-                if len(display_line) > 50:
-                    display_line = display_line[:47] + "..."
-                spinner.message = f"Solving JS / Fetching: {display_line}"
+        try:
+            for line in process.stderr:
+                clean_line = line.strip()
+                stderr_lines.append(clean_line)
+                if "extracting" in clean_line.lower() or "signature" in clean_line.lower() or "js" in clean_line.lower() or "downloading" in clean_line.lower():
+                    display_line = clean_line.replace("[youtube] ", "").strip()
+                    if len(display_line) > 50:
+                        display_line = display_line[:47] + "..."
+                    spinner.message = f"Solving JS / Fetching: {display_line}"
+        except (ValueError, OSError):
+            pass
                 
     stderr_thread = threading.Thread(target=read_stderr)
     stderr_thread.daemon = True
     stderr_thread.start()
     
-    stdout_data, _ = process.communicate()
+    stdout_data = process.stdout.read()
+    process.wait()
     spinner.stop()
     stderr_thread.join()
     
+    try:
+        process.stdout.close()
+    except Exception:
+        pass
+    try:
+        process.stderr.close()
+    except Exception:
+        pass
+        
     if process.returncode != 0:
         error_msg = "\n".join(stderr_lines)
         raise Exception(f"Extraction failed: {error_msg}")
